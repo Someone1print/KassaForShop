@@ -1,0 +1,65 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Кассиры - Касса магазина{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="bi bi-people"></i> Кассиры</h2>
+            <a href="{% url 'cashier_create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Добавить кассира
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Логин</th>
+                        <th>Имя</th>
+                        <th>Email</th>
+                        <th>Статус</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cashier in cashiers %}
+                    <tr>
+                        <td>#{{ cashier.id }}</td>
+                        <td><strong>{{ cashier.username }}</strong></td>
+                        <td>{{ cashier.first_name }} {{ cashier.last_name }}</td>
+                        <td>{{ cashier.email|default:"—" }}</td>
+                        <td>
+                            {% if cashier.is_active %}
+                                <span class="badge bg-success">Активен</span>
+                            {% else %}
+                                <span class="badge bg-danger">Заблокирован</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'cashier_detail' cashier.id %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i> Детали
+                            </a>
+                            <a href="{% url 'cashier_edit' cashier.id %}" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-pencil"></i> Редактировать
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">Кассиры не найдены</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

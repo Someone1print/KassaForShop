@@ -1,0 +1,596 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Касса - Касса магазина{% endblock %}
+
+{% block extra_css %}
+<style>
+    #cart-items {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    .cart-item {
+        border-bottom: 1px solid #dee2e6;
+        padding: 10px 0;
+    }
+    .barcode-input {
+        font-size: 1.5rem;
+        text-align: center;
+    }
+    #search-results {
+        position: absolute;
+        z-index: 1000;
+        width: 100%;
+        max-height: 300px;
+        overflow-y: auto;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+    #search-results .list-group-item {
+        border-left: none;
+        border-right: none;
+    }
+    #search-results .list-group-item:first-child {
+        border-top: none;
+    }
+    #search-results .list-group-item:last-child {
+        border-bottom: none;
+    }
+    #search-results .list-group-item:hover {
+        background-color: #f8f9fa;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5><i class="bi bi-cart"></i> Кассовый экран</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="barcode-input" class="form-label">Штрихкод</label>
+                    <input type="text" class="form-control barcode-input" id="barcode-input" 
+                           placeholder="Отсканируйте или введите штрихкод" autofocus>
+                </div>
+                <div class="mb-3 position-relative">
+                    <label for="product-search" class="form-label">Поиск по названию</label>
+                    <input type="text" class="form-control" id="product-search" 
+                           placeholder="Введите название товара (начните вводить для поиска)">
+                    <div id="search-results" class="list-group mt-2" style="display: none;"></div>
+                </div>
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="return-mode">
+                    <label class="form-check-label" for="return-mode">
+                        <strong>Режим возврата</strong>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5>Корзина</h5>
+            </div>
+            <div class="card-body">
+                <div id="cart-items">
+                    <p class="text-muted text-center">Корзина пуста</p>
+                </div>
+                <div class="mt-3">
+                    <strong>Итого: <span id="cart-total">0.00</span> ₽</strong>
+                    <div id="return-mode-indicator" class="text-danger mt-1" style="display: none;">
+                        <small><i class="bi bi-exclamation-triangle"></i> Режим возврата - сумма будет вычтена</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5>Оплата</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Способ оплаты</label>
+                    <div class="btn-group-vertical w-100" role="group">
+                        <input type="radio" class="btn-check" name="payment-method" id="payment-cash" 
+                               value="CASH" checked>
+                        <label class="btn btn-outline-primary" for="payment-cash">
+                            <i class="bi bi-cash"></i> Наличные
+                        </label>
+                        <input type="radio" class="btn-check" name="payment-method" id="payment-card" 
+                               value="CARD">
+                        <label class="btn btn-outline-primary" for="payment-card">
+                            <i class="bi bi-credit-card"></i> Карта
+                        </label>
+                    </div>
+                </div>
+                <button id="checkout-btn" class="btn btn-success btn-lg w-100">
+                    <i class="bi bi-check-circle"></i> Оформить
+                </button>
+                <button id="clear-cart-btn" class="btn btn-outline-danger w-100 mt-2">
+                    <i class="bi bi-trash"></i> Очистить корзину
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal для QR-кода оплаты картой -->
+<div class="modal fade" id="qrCodeModal" tabindex="-1" aria-labelledby="qrCodeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="qrCodeModalLabel">
+                    <i class="bi bi-credit-card"></i> Оплата картой
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                {% if payment_settings.qr_code_image %}
+                <div class="mb-3">
+                    <img src="{{ payment_settings.qr_code_image.url }}" alt="QR-код" 
+                         class="img-fluid" style="max-width: 300px; border: 2px solid #dee2e6; border-radius: 8px;">
+                </div>
+                {% endif %}
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> {{ payment_settings.card_payment_message }}
+                </div>
+                <p class="text-muted">После оплаты нажмите "Подтвердить оплату"</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-success" id="confirm-payment-btn">
+                    <i class="bi bi-check-circle"></i> Подтвердить оплату
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal для QR-кода оплаты картой -->
+<div class="modal fade" id="qrCodeModal" tabindex="-1" aria-labelledby="qrCodeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="qrCodeModalLabel">
+                    <i class="bi bi-credit-card"></i> Оплата картой
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                {% if payment_settings.qr_code_image %}
+                <div class="mb-3">
+                    <img src="{{ payment_settings.qr_code_image.url }}" alt="QR-код" 
+                         class="img-fluid" style="max-width: 300px; border: 2px solid #dee2e6; border-radius: 8px;">
+                </div>
+                {% endif %}
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> {{ payment_settings.card_payment_message }}
+                </div>
+                <p class="text-muted">После оплаты нажмите "Подтвердить оплату"</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-success" id="confirm-payment-btn">
+                    <i class="bi bi-check-circle"></i> Подтвердить оплату
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const STORAGE_KEY = 'pos_cart_{{ current_shift.id }}';
+    const STORAGE_SEARCH_KEY = 'pos_search_{{ current_shift.id }}';
+    const STORAGE_RETURN_MODE_KEY = 'pos_return_mode_{{ current_shift.id }}';
+    
+    let cart = [];
+    const barcodeInput = document.getElementById('barcode-input');
+    const productSearch = document.getElementById('product-search');
+    const searchResults = document.getElementById('search-results');
+    const cartItems = document.getElementById('cart-items');
+    const cartTotal = document.getElementById('cart-total');
+    const checkoutBtn = document.getElementById('checkout-btn');
+    const clearCartBtn = document.getElementById('clear-cart-btn');
+    const returnMode = document.getElementById('return-mode');
+
+    // Восстановление состояния из localStorage
+    function loadCartFromStorage() {
+        try {
+            const savedCart = localStorage.getItem(STORAGE_KEY);
+            if (savedCart) {
+                cart = JSON.parse(savedCart);
+                updateCartDisplay();
+            }
+        } catch (e) {
+            console.error('Ошибка загрузки корзины:', e);
+        }
+    }
+
+    // Сохранение корзины в localStorage
+    function saveCartToStorage() {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(cart));
+        } catch (e) {
+            console.error('Ошибка сохранения корзины:', e);
+        }
+    }
+
+    // Восстановление поля поиска
+    function loadSearchFromStorage() {
+        try {
+            const savedSearch = localStorage.getItem(STORAGE_SEARCH_KEY);
+            if (savedSearch) {
+                productSearch.value = savedSearch;
+                if (savedSearch.length >= 1) {
+                    searchProducts(savedSearch);
+                }
+            }
+        } catch (e) {
+            console.error('Ошибка загрузки поиска:', e);
+        }
+    }
+
+    // Сохранение поля поиска
+    function saveSearchToStorage() {
+        try {
+            localStorage.setItem(STORAGE_SEARCH_KEY, productSearch.value);
+        } catch (e) {
+            console.error('Ошибка сохранения поиска:', e);
+        }
+    }
+
+    // Восстановление режима возврата
+    function loadReturnModeFromStorage() {
+        try {
+            const savedReturnMode = localStorage.getItem(STORAGE_RETURN_MODE_KEY);
+            if (savedReturnMode === 'true') {
+                returnMode.checked = true;
+            }
+        } catch (e) {
+            console.error('Ошибка загрузки режима возврата:', e);
+        }
+    }
+
+    // Сохранение режима возврата и обновление отображения
+    returnMode.addEventListener('change', function() {
+        try {
+            localStorage.setItem(STORAGE_RETURN_MODE_KEY, this.checked.toString());
+            updateCartDisplay(); // Обновляем отображение корзины при изменении режима
+            const indicator = document.getElementById('return-mode-indicator');
+            if (indicator) {
+                indicator.style.display = this.checked ? 'block' : 'none';
+            }
+        } catch (e) {
+            console.error('Ошибка сохранения режима возврата:', e);
+        }
+    });
+    
+    // Показываем индикатор при загрузке, если режим возврата включён
+    if (returnMode.checked) {
+        const indicator = document.getElementById('return-mode-indicator');
+        if (indicator) {
+            indicator.style.display = 'block';
+        }
+    }
+
+    // Загрузка при старте
+    loadCartFromStorage();
+    loadSearchFromStorage();
+    loadReturnModeFromStorage();
+    
+    // Модальное окно для QR-кода
+    const qrCodeModal = new bootstrap.Modal(document.getElementById('qrCodeModal'));
+    const paymentCash = document.getElementById('payment-cash');
+    const paymentCard = document.getElementById('payment-card');
+    const confirmPaymentBtn = document.getElementById('confirm-payment-btn');
+    let pendingCheckout = false; // Флаг для отслеживания ожидающего оформления
+    
+    // Показываем модальное окно при выборе оплаты картой (если уже есть товары в корзине)
+    paymentCard.addEventListener('change', function() {
+        if (this.checked && cart.length > 0) {
+            qrCodeModal.show();
+        }
+    });
+    
+    // При выборе наличных закрываем модальное окно
+    paymentCash.addEventListener('change', function() {
+        if (this.checked) {
+            qrCodeModal.hide();
+            pendingCheckout = false;
+        }
+    });
+    
+
+    // Поиск товара по штрихкоду
+    barcodeInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            const barcode = this.value.trim();
+            if (barcode) {
+                fetchProductByBarcode(barcode);
+                this.value = '';
+            }
+        }
+    });
+
+    // Поиск товара по названию (улучшенный - с 1 символа)
+    let searchTimeout;
+    productSearch.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        const query = this.value.trim();
+        saveSearchToStorage(); // Сохраняем введённый текст
+        
+        if (query.length >= 1) {
+            searchTimeout = setTimeout(() => searchProducts(query), 200); // Уменьшил задержку до 200мс
+        } else {
+            searchResults.style.display = 'none';
+        }
+    });
+
+    function fetchProductByBarcode(barcode) {
+        fetch(`/api/products/by-barcode/${barcode}/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert('Товар не найден');
+                } else {
+                    addToCart(data);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Ошибка при поиске товара');
+            });
+    }
+
+    function searchProducts(query) {
+        fetch(`/api/products/?search=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                displaySearchResults(data.results || data);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+    }
+
+    function displaySearchResults(products) {
+        if (products.length === 0) {
+            searchResults.innerHTML = '<div class="list-group-item text-muted">Товары не найдены</div>';
+            searchResults.style.display = 'block';
+            return;
+        }
+        
+        // Ограничиваем количество результатов до 10 для удобства
+        const limitedProducts = products.slice(0, 10);
+        
+        searchResults.innerHTML = limitedProducts.map((product, idx) => {
+            const productJson = JSON.stringify(product).replace(/'/g, "&#39;");
+            return `
+            <a href="#" class="list-group-item list-group-item-action product-item" 
+               data-product='${productJson}'
+               style="cursor: pointer;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>${product.name}</strong><br>
+                        <small class="text-muted">${parseFloat(product.price).toFixed(2)} ₽</small>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge ${product.stock_qty > 0 ? 'bg-success' : 'bg-danger'}">
+                            Остаток: ${product.stock_qty}
+                        </span>
+                    </div>
+                </div>
+            </a>
+        `;
+        }).join('');
+        
+        // Добавляем обработчики клика через addEventListener
+        searchResults.querySelectorAll('.product-item').forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                const product = JSON.parse(this.getAttribute('data-product'));
+                addToCart(product);
+            });
+        });
+        
+        searchResults.style.display = 'block';
+    }
+
+    // Закрыть результаты поиска при клике вне
+    document.addEventListener('click', function(e) {
+        if (!productSearch.contains(e.target) && !searchResults.contains(e.target)) {
+            searchResults.style.display = 'none';
+        }
+    });
+
+    function addToCart(product) {
+        const existingItem = cart.find(item => item.product_id === product.id);
+        if (existingItem) {
+            existingItem.qty += 1;
+        } else {
+            cart.push({
+                product_id: product.id,
+                name: product.name,
+                price: parseFloat(product.price),
+                qty: 1,
+                stock_qty: product.stock_qty
+            });
+        }
+        updateCartDisplay();
+        saveCartToStorage(); // Сохраняем корзину
+        productSearch.value = '';
+        saveSearchToStorage(); // Очищаем сохранённый поиск
+        searchResults.style.display = 'none';
+        barcodeInput.focus();
+    }
+
+    function removeFromCart(index) {
+        cart.splice(index, 1);
+        updateCartDisplay();
+        saveCartToStorage(); // Сохраняем корзину
+    }
+
+    function updateCartQty(index, delta) {
+        cart[index].qty += delta;
+        if (cart[index].qty <= 0) {
+            removeFromCart(index);
+        } else {
+            updateCartDisplay();
+            saveCartToStorage(); // Сохраняем корзину
+        }
+    }
+
+    function updateCartDisplay() {
+        if (cart.length === 0) {
+            cartItems.innerHTML = '<p class="text-muted text-center">Корзина пуста</p>';
+            checkoutBtn.disabled = true;
+        } else {
+            const isReturnMode = returnMode.checked;
+            let total = 0;
+            cartItems.innerHTML = cart.map((item, index) => {
+                const lineTotal = item.price * item.qty;
+                // При режиме возврата сумма отрицательная
+                const displayTotal = isReturnMode ? -lineTotal : lineTotal;
+                total += isReturnMode ? -lineTotal : lineTotal;
+                
+                return `
+                    <div class="cart-item">
+                        <div class="row align-items-center">
+                            <div class="col-5">
+                                <strong>${item.name}</strong><br>
+                                <small class="text-muted">${item.price} ₽ × ${item.qty}</small>
+                                ${isReturnMode ? '<br><span class="badge bg-warning text-dark">Возврат</span>' : ''}
+                            </div>
+                            <div class="col-3">
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-secondary" onclick="updateCartQty(${index}, -1)">-</button>
+                                    <span class="btn btn-outline-secondary disabled">${item.qty}</span>
+                                    <button class="btn btn-outline-secondary" onclick="updateCartQty(${index}, 1)">+</button>
+                                </div>
+                            </div>
+                            <div class="col-3 text-end">
+                                <strong class="${isReturnMode ? 'text-danger' : ''}">${isReturnMode ? '-' : ''}${lineTotal.toFixed(2)} ₽</strong><br>
+                                <button class="btn btn-sm btn-outline-danger" onclick="removeFromCart(${index})">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            // Отображаем итог с учётом режима возврата
+            const totalElement = document.getElementById('cart-total');
+            if (isReturnMode && total < 0) {
+                totalElement.textContent = total.toFixed(2);
+                totalElement.className = 'text-danger';
+            } else if (isReturnMode && total === 0) {
+                totalElement.textContent = '0.00';
+                totalElement.className = '';
+            } else {
+                totalElement.textContent = total.toFixed(2);
+                totalElement.className = '';
+            }
+            
+            checkoutBtn.disabled = false;
+            checkoutBtn.innerHTML = isReturnMode ? 
+                '<i class="bi bi-arrow-counterclockwise"></i> Оформить возврат' : 
+                '<i class="bi bi-check-circle"></i> Оформить';
+        }
+    }
+
+    function clearCart() {
+        if (confirm('Очистить корзину?')) {
+            cart = [];
+            updateCartDisplay();
+            saveCartToStorage(); // Сохраняем пустую корзину
+        }
+    }
+
+    clearCartBtn.addEventListener('click', clearCart);
+
+    // Функция оформления покупки
+    function processCheckout(paymentMethod) {
+        const receiptType = returnMode.checked ? 'RETURN' : 'SALE';
+        const items = cart.map(item => ({
+            product_id: item.product_id,
+            qty: item.qty
+        }));
+
+        fetch('/api/pos/checkout/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                receipt_type: receiptType,
+                payment_method: paymentMethod,
+                items: items
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert('Ошибка: ' + data.error);
+            } else {
+                alert('Покупка успешно оформлена!');
+                cart = [];
+                updateCartDisplay();
+                saveCartToStorage(); // Очищаем сохранённую корзину
+                barcodeInput.focus();
+                // Переключаем обратно на наличные после оформления
+                paymentCash.checked = true;
+                pendingCheckout = false;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Ошибка при оформлении покупки');
+            pendingCheckout = false;
+        });
+    }
+    
+    checkoutBtn.addEventListener('click', function() {
+        if (cart.length === 0) return;
+
+        const paymentMethod = document.querySelector('input[name="payment-method"]:checked').value;
+        
+        // Если выбрана оплата картой, показываем модальное окно с QR-кодом
+        if (paymentMethod === 'CARD') {
+            pendingCheckout = true;
+            qrCodeModal.show();
+            return;
+        }
+        
+        // Для наличных сразу оформляем
+        processCheckout(paymentMethod);
+    });
+    
+    // Обработчик подтверждения оплаты в модальном окне
+    confirmPaymentBtn.addEventListener('click', function() {
+        qrCodeModal.hide();
+        // Небольшая задержка перед оформлением, чтобы модальное окно успело закрыться
+        setTimeout(() => {
+            if (pendingCheckout) {
+                processCheckout('CARD');
+            }
+        }, 300);
+    });
+
+    // Экспорт функций для onclick
+    window.addToCart = addToCart;
+    window.removeFromCart = removeFromCart;
+    window.updateCartQty = updateCartQty;
+</script>
+{% endblock %}
+

@@ -1,0 +1,88 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Кассир {{ cashier.username }} - Касса магазина{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="bi bi-person"></i> Кассир: {{ cashier.username }}</h2>
+            <a href="{% url 'cashier_edit' cashier.id %}" class="btn btn-outline-primary">
+                <i class="bi bi-pencil"></i> Редактировать
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Информация</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Логин:</strong> {{ cashier.username }}</p>
+                <p><strong>Имя:</strong> {{ cashier.first_name|default:"—" }}</p>
+                <p><strong>Фамилия:</strong> {{ cashier.last_name|default:"—" }}</p>
+                <p><strong>Email:</strong> {{ cashier.email|default:"—" }}</p>
+                <p><strong>Статус:</strong> 
+                    {% if cashier.is_active %}
+                        <span class="badge bg-success">Активен</span>
+                    {% else %}
+                        <span class="badge bg-danger">Заблокирован</span>
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5>Смены</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Открыта</th>
+                        <th>Закрыта</th>
+                        <th>Статус</th>
+                        <th>Выручка</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for shift in shifts %}
+                    <tr>
+                        <td>#{{ shift.id }}</td>
+                        <td>{{ shift.opened_at|date:"d.m.Y H:i" }}</td>
+                        <td>{{ shift.closed_at|date:"d.m.Y H:i"|default:"—" }}</td>
+                        <td>
+                            {% if shift.status == 'OPEN' %}
+                                <span class="badge bg-success">Открыта</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Закрыта</span>
+                            {% endif %}
+                        </td>
+                        <td><strong>{{ shift.total_amount|floatformat:2 }} ₽</strong></td>
+                        <td>
+                            <a href="{% url 'shift_detail' shift.id %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i> Детали
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">Смены не найдены</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

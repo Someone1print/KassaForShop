@@ -1,0 +1,153 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Отчёты - Касса магазина{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4"><i class="bi bi-graph-up"></i> Отчёты</h2>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5>Фильтры</h5>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Дата от</label>
+                <input type="date" class="form-control" name="date_from" value="{{ date_from }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Дата до</label>
+                <input type="date" class="form-control" name="date_to" value="{{ date_to }}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Кассир</label>
+                <select class="form-select" name="cashier_id">
+                    <option value="">Все кассиры</option>
+                    {% for cashier in cashiers %}
+                    <option value="{{ cashier.id }}" {% if cashier_id == cashier.id|stringformat:"s" %}selected{% endif %}>
+                        {{ cashier.username }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i> Применить
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h6>Продажи</h6>
+                <h4>{{ stats.total_sales }}</h4>
+                <p>{{ stats.sales_amount|floatformat:2 }} ₽</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <h6>Возвраты</h6>
+                <h4>{{ stats.total_returns }}</h4>
+                <p>{{ stats.returns_amount|floatformat:2 }} ₽</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h6>Чистая выручка</h6>
+                <h4>{{ stats.net_amount|floatformat:2 }} ₽</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <h6>Наличные / Карта</h6>
+                <p>{{ stats.cash_amount|floatformat:2 }} ₽ / {{ stats.card_amount|floatformat:2 }} ₽</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>По кассирам</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Кассир</th>
+                                <th>Чеков</th>
+                                <th>Сумма</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stat in cashiers_stats %}
+                            <tr>
+                                <td>{{ stat.cashier__username }}</td>
+                                <td>{{ stat.receipts_count }}</td>
+                                <td><strong>{{ stat.total_amount|floatformat:2 }} ₽</strong></td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center text-muted">Нет данных</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>По сменам</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Смена</th>
+                                <th>Чеков</th>
+                                <th>Сумма</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for shift in shifts_stats %}
+                            <tr>
+                                <td>#{{ shift.id }}</td>
+                                <td>{{ shift.receipts_count }}</td>
+                                <td><strong>{{ shift.shift_total|floatformat:2 }} ₽</strong></td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center text-muted">Нет данных</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

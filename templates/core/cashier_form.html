@@ -1,0 +1,69 @@
+{% extends 'core/base.html' %}
+
+{% block title %}{% if cashier %}Редактировать{% else %}Создать{% endif %} кассира - Касса магазина{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5><i class="bi bi-person-plus"></i> {% if cashier %}Редактировать{% else %}Создать{% endif %} кассира</h5>
+            </div>
+            <div class="card-body">
+                {% if error %}
+                    <div class="alert alert-danger">{{ error }}</div>
+                {% endif %}
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Логин *</label>
+                        <input type="text" class="form-control" id="username" name="username" 
+                               value="{{ cashier.username|default:'' }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Пароль {% if cashier %}(оставьте пустым, чтобы не менять){% else %}*{% endif %}</label>
+                        <input type="password" class="form-control" id="password" name="password" 
+                               {% if not cashier %}required{% endif %}>
+                    </div>
+                    <div class="mb-3">
+                        <label for="first_name" class="form-label">Имя</label>
+                        <input type="text" class="form-control" id="first_name" name="first_name" 
+                               value="{{ cashier.first_name|default:'' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="last_name" class="form-label">Фамилия</label>
+                        <input type="text" class="form-control" id="last_name" name="last_name" 
+                               value="{{ cashier.last_name|default:'' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" name="email" 
+                               value="{{ cashier.email|default:'' }}">
+                    </div>
+                    {% if cashier %}
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="is_active" name="is_active" 
+                                   {% if cashier.is_active %}checked{% endif %}>
+                            <label class="form-check-label" for="is_active">
+                                Активен
+                            </label>
+                        </div>
+                    </div>
+                    {% endif %}
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> Сохранить
+                        </button>
+                        <a href="{% if cashier %}{% url 'cashier_detail' cashier.id %}{% else %}{% url 'cashiers_list' %}{% endif %}" 
+                           class="btn btn-outline-secondary">
+                            Отмена
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

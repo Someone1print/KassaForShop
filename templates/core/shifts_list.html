@@ -1,0 +1,75 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Смены - Касса магазина{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="bi bi-clock-history"></i> Смены</h2>
+            {% if not is_admin %}
+            <a href="{% url 'shift_open' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Открыть смену
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        {% if is_admin %}<th>Кассир</th>{% endif %}
+                        <th>Открыта</th>
+                        <th>Закрыта</th>
+                        <th>Статус</th>
+                        <th>Выручка</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for shift in shifts %}
+                    <tr>
+                        <td>#{{ shift.id }}</td>
+                        {% if is_admin %}
+                        <td>{{ shift.cashier.username }}</td>
+                        {% endif %}
+                        <td>{{ shift.opened_at|date:"d.m.Y H:i" }}</td>
+                        <td>{{ shift.closed_at|date:"d.m.Y H:i"|default:"—" }}</td>
+                        <td>
+                            {% if shift.status == 'OPEN' %}
+                                <span class="badge bg-success">Открыта</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Закрыта</span>
+                            {% endif %}
+                        </td>
+                        <td><strong>{{ shift.total_amount|floatformat:2 }} ₽</strong></td>
+                        <td>
+                            <a href="{% url 'shift_detail' shift.id %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i> Детали
+                            </a>
+                            {% if shift.status == 'OPEN' and not is_admin and shift.cashier == user %}
+                            <a href="{% url 'shift_close' shift.id %}" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-x-circle"></i> Закрыть
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="{% if is_admin %}7{% else %}6{% endif %}" class="text-center text-muted">
+                            Смены не найдены
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

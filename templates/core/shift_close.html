@@ -1,0 +1,47 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Закрыть смену - Касса магазина{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h5><i class="bi bi-x-circle"></i> Закрыть смену #{{ shift.id }}</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <p><strong>Открыта:</strong> {{ shift.opened_at|date:"d.m.Y H:i" }}</p>
+                    <p><strong>Наличные на начало:</strong> {{ shift.opening_cash|floatformat:2 }} ₽</p>
+                    <p><strong>Выручка:</strong> {{ shift.total_amount|floatformat:2 }} ₽</p>
+                    <p><strong>Наличные (по чекам):</strong> {{ shift.total_cash|floatformat:2 }} ₽</p>
+                </div>
+                {% if error %}
+                    <div class="alert alert-danger">{{ error }}</div>
+                {% endif %}
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="closing_cash" class="form-label">Наличные на конец смены</label>
+                        <input type="number" class="form-control" id="closing_cash" 
+                               name="closing_cash" step="0.01" min="0">
+                        <small class="form-text text-muted">Введите сумму наличных в кассе на конец смены</small>
+                    </div>
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i> После закрытия смены её нельзя будет изменить.
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-check-circle"></i> Закрыть смену
+                        </button>
+                        <a href="{% url 'shift_detail' shift.id %}" class="btn btn-outline-secondary">
+                            Отмена
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

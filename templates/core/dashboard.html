@@ -1,0 +1,177 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Dashboard - Касса магазина{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4"><i class="bi bi-speedometer2"></i> Dashboard</h2>
+    </div>
+</div>
+
+{% if is_admin %}
+    <!-- Статистика для админа -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <h5 class="card-title">Чеков сегодня</h5>
+                    <h2>{{ today_receipts_count }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <h5 class="card-title">Выручка сегодня</h5>
+                    <h2>{{ today_total|floatformat:2 }} ₽</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning">
+                <div class="card-body">
+                    <h5 class="card-title">Активных смен</h5>
+                    <h2>{{ active_shifts }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-info">
+                <div class="card-body">
+                    <h5 class="card-title">Кассиров</h5>
+                    <h2>{{ total_cashiers }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Выручка за последние 7 дней</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="revenueChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Топ товаров (7 дней)</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Товар</th>
+                                <th>Кол-во</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in top_products %}
+                            <tr>
+                                <td>{{ product.product__name|truncatewords:3 }}</td>
+                                <td><strong>{{ product.total_qty }}</strong></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+{% else %}
+    <!-- Статистика для кассира -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <h5 class="card-title">Смен сегодня</h5>
+                    <h2>{{ today_shifts_count }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <h5 class="card-title">Чеков сегодня</h5>
+                    <h2>{{ today_receipts_count }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-info">
+                <div class="card-body">
+                    <h5 class="card-title">Выручка сегодня</h5>
+                    <h2>{{ today_total|floatformat:2 }} ₽</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if current_shift %}
+    <div class="card">
+        <div class="card-header bg-success text-white">
+            <h5><i class="bi bi-check-circle"></i> Смена открыта</h5>
+        </div>
+        <div class="card-body">
+            <p>Смена открыта: {{ current_shift.opened_at|date:"d.m.Y H:i" }}</p>
+            <a href="{% url 'pos' %}" class="btn btn-primary">
+                <i class="bi bi-cart"></i> Перейти к кассе
+            </a>
+            <a href="{% url 'shift_close' current_shift.id %}" class="btn btn-outline-danger">
+                <i class="bi bi-x-circle"></i> Закрыть смену
+            </a>
+        </div>
+    </div>
+    {% else %}
+    <div class="card">
+        <div class="card-header bg-warning">
+            <h5><i class="bi bi-exclamation-triangle"></i> Смена не открыта</h5>
+        </div>
+        <div class="card-body">
+            <p>Для работы с кассой необходимо открыть смену.</p>
+            <a href="{% url 'shift_open' %}" class="btn btn-primary">
+                <i class="bi bi-play-circle"></i> Открыть смену
+            </a>
+        </div>
+    </div>
+    {% endif %}
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if is_admin %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    const revenueData = {{ last_7_days|safe }};
+    const ctx = document.getElementById('revenueChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: revenueData.map(d => d.date),
+            datasets: [{
+                label: 'Выручка (₽)',
+                data: revenueData.map(d => d.total),
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>
+{% endif %}
+{% endblock %}
+

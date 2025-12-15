@@ -1,0 +1,170 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Детали смены - Касса магазина{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4"><i class="bi bi-clock-history"></i> Детали смены #{{ shift.id }}</h2>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Информация о смене</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Кассир:</strong> {{ shift.cashier.username }}</p>
+                <p><strong>Открыта:</strong> {{ shift.opened_at|date:"d.m.Y H:i" }}</p>
+                <p><strong>Закрыта:</strong> {{ shift.closed_at|date:"d.m.Y H:i"|default:"—" }}</p>
+                <p><strong>Статус:</strong> 
+                    {% if shift.status == 'OPEN' %}
+                        <span class="badge bg-success">Открыта</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Закрыта</span>
+                    {% endif %}
+                </p>
+                <p><strong>Наличные на начало:</strong> {{ shift.opening_cash|floatformat:2 }} ₽</p>
+                {% if shift.closing_cash %}
+                <p><strong>Наличные на конец:</strong> {{ shift.closing_cash|floatformat:2 }} ₽</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Итоги</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Всего чеков:</strong> {{ receipts|length }}</p>
+                <p><strong>Наличные:</strong> {{ shift.total_cash|floatformat:2 }} ₽</p>
+                <p><strong>Карта:</strong> {{ shift.total_card|floatformat:2 }} ₽</p>
+                <p><strong>Общая сумма:</strong> <strong class="text-success">{{ shift.total_amount|floatformat:2 }} ₽</strong></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5>Чеки</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Тип</th>
+                        <th>Оплата</th>
+                        <th>Сумма</th>
+                        <th>Дата</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for receipt in receipts %}
+                    <tr>
+                        <td>#{{ receipt.id }}</td>
+                        <td>
+                            {% if receipt.receipt_type == 'SALE' %}
+                                <span class="badge bg-success">Продажа</span>
+                            {% else %}
+                                <span class="badge bg-warning">Возврат</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if receipt.payment_method == 'CASH' %}
+                                <i class="bi bi-cash"></i> Наличные
+                            {% else %}
+                                <i class="bi bi-credit-card"></i> Карта
+                            {% endif %}
+                        </td>
+                        <td><strong>{{ receipt.total_amount|floatformat:2 }} ₽</strong></td>
+                        <td>{{ receipt.created_at|date:"d.m.Y H:i" }}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-info" onclick="showReceiptDetails({{ receipt.id }})">
+                                <i class="bi bi-eye"></i> Детали
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">Чеки не найдены</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal для деталей чека -->
+<div class="modal fade" id="receiptModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Детали чека</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="receiptDetails">
+                Загрузка...
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function showReceiptDetails(receiptId) {
+        fetch(`/api/receipts/${receiptId}/`)
+            .then(response => response.json())
+            .then(data => {
+                const items = data.items.map(item => `
+                    <tr>
+                        <td>${item.product_name}</td>
+                        <td>${item.qty}</td>
+                        <td>${parseFloat(item.price_at_moment).toFixed(2)} ₽</td>
+                        <td><strong>${parseFloat(item.line_total).toFixed(2)} ₽</strong></td>
+                    </tr>
+                `).join('');
+                
+                document.getElementById('receiptDetails').innerHTML = `
+                    <p><strong>Тип:</strong> ${data.receipt_type === 'SALE' ? 'Продажа' : 'Возврат'}</p>
+                    <p><strong>Оплата:</strong> ${data.payment_method === 'CASH' ? 'Наличные' : 'Карта'}</p>
+                    <p><strong>Дата:</strong> ${new Date(data.created_at).toLocaleString('ru-RU')}</p>
+                    <hr>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Товар</th>
+                                <th>Кол-во</th>
+                                <th>Цена</th>
+                                <th>Сумма</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${items}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th colspan="3">Итого:</th>
+                                <th>${parseFloat(data.total_amount).toFixed(2)} ₽</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                `;
+                new bootstrap.Modal(document.getElementById('receiptModal')).show();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Ошибка при загрузке деталей чека');
+            });
+    }
+</script>
+{% endblock %}
+
