@@ -82,3 +82,4 @@ class Migration(migrations.Migration):
         migrations.RunPython(create_demo_data, remove_demo_data),
     ]
 
+

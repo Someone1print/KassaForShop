@@ -95,3 +95,4 @@ class ShiftService:
             status=Shift.STATUS_OPEN
         ).first()
 
+

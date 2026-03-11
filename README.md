@@ -217,3 +217,4 @@ python manage.py migrate
 2. Выполнены ли миграции (`python manage.py migrate`)
 3. Созданы ли демо-данные (`python manage.py seed_demo_data`)
 
+

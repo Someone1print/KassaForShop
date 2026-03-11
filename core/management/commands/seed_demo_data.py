@@ -80,3 +80,4 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('  Администратор: admin / admin12345'))
         self.stdout.write(self.style.SUCCESS('  Кассир: cashier1 / cashier12345'))
 
+
