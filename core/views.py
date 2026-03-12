@@ -11,8 +11,26 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 import json
 
-from core.models import Product, Shift, Receipt, ReceiptItem, PaymentSettings
+from core.models import Product, Shift, Receipt, ReceiptItem, PaymentSettings, UserLoginLog
 from core.services.shift_service import ShiftService
+from core.forms import RegistrationForm
+
+
+def register_view(request):
+    """Регистрация нового пользователя"""
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+    
+    if request.method == 'POST':
+        form = RegistrationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+            return redirect('dashboard')
+    else:
+        form = RegistrationForm()
+    
+    return render(request, 'registration/register.html', {'form': form})
 
 
 def login_view(request):
@@ -20,17 +38,25 @@ def login_view(request):
     if request.user.is_authenticated:
         return redirect('dashboard')
     
+    error = None
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
+        
+        # Рекомендуется использовать встроенные механизмы Django для предотвращения атак
         user = authenticate(request, username=username, password=password)
-        if user:
-            login(request, user)
-            return redirect('dashboard')
+        
+        if user is not None:
+            if user.is_active:
+                login(request, user)
+                return redirect('dashboard')
+            else:
+                error = 'Аккаунт заблокирован'
         else:
-            return render(request, 'core/login.html', {'error': 'Неверный логин или пароль'})
+            # Сигналы в signals.py запишут неудачную попытку
+            error = 'Неверный логин или пароль'
     
-    return render(request, 'core/login.html')
+    return render(request, 'registration/login.html', {'error': error})
 
 
 def logout_view(request):

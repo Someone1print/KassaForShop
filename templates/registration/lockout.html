@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Доступ ограничен - Касса магазина</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .lockout-card {
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        .bi-shield-lock {
+            font-size: 5rem;
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="lockout-card p-4">
+        <i class="bi bi-shield-lock mb-4"></i>
+        <h1 class="h3 mb-3 fw-normal">Доступ временно ограничен</h1>
+        <p class="text-muted mb-4">
+            Слишком много неудачных попыток входа. В целях безопасности ваш доступ с этого IP-адреса и аккаунта временно заблокирован на <strong>10 минут</strong>.
+        </p>
+        <div class="alert alert-warning">
+            Пожалуйста, подождите или обратитесь к администратору системы.
+        </div>
+        <a href="{% url 'login' %}" class="btn btn-outline-primary mt-3">Вернуться к странице входа</a>
+    </div>
+</body>
+</html>

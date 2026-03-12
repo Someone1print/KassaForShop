@@ -183,3 +183,19 @@ class PaymentSettings(models.Model):
         """Получить настройки (singleton)"""
         obj, created = cls.objects.get_or_create(pk=1)
         return obj
+class UserLoginLog(models.Model):
+    """Логирование попыток входа"""
+    username = models.CharField(max_length=150, verbose_name='Логин')
+    ip_address = models.GenericIPAddressField(null=True, blank=True, verbose_name='IP адрес')
+    timestamp = models.DateTimeField(auto_now_add=True, verbose_name='Время попытки')
+    is_success = models.BooleanField(default=False, verbose_name='Результат входа')
+    user_agent = models.CharField(max_length=500, null=True, blank=True, verbose_name='Пользовательский агент')
+
+    class Meta:
+        verbose_name = 'Попытка входа'
+        verbose_name_plural = 'Попытки входа'
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        result = "Успех" if self.is_success else "Отказ"
+        return f"{self.timestamp} - {self.username} ({self.ip_address}): {result}"
