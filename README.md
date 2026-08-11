@@ -1,5 +1,7 @@
 # Система контроля кассовых операций магазина
 
+[![Django CI](https://github.com/Someone1print/KassaForShop/actions/workflows/django.yml/badge.svg)](https://github.com/Someone1print/KassaForShop/actions/workflows/django.yml)
+
 Полнофункциональное веб-приложение для управления кассовыми операциями магазина на Django 5+.
 
 ## Возможности
@@ -218,3 +220,22 @@ python manage.py migrate
 3. Созданы ли демо-данные (`python manage.py seed_demo_data`)
 
 
+
+## Тесты
+
+Тесты покрывают сервисный слой: смены, продажи, возвраты, атомарность
+транзакций и аудит операций.
+
+```bash
+python manage.py test core
+```
+
+CI (GitHub Actions) гоняет тесты на Python 3.12/3.13 + линт ruff.
+
+## Запуск в Docker
+
+```bash
+docker compose up --build
+```
+
+Поднимает PostgreSQL 16 и приложение на [http://localhost:8000](http://localhost:8000).
